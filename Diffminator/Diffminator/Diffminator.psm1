@@ -89,7 +89,7 @@ Function Save-InitialState {
 
 		$results = New-Object System.Management.Automation.PSObject
 		
-		$payload | Add-Member -MemberType NoteProperty "jobID" $jobID
+		$results | Add-Member -MemberType NoteProperty "jobID" $jobID
 
 		$results | Add-Member -MemberType NoteProperty "payload" ($payload | ConvertTo-Json | Out-String)
 
@@ -160,19 +160,67 @@ Function CompareWith-InitialState {
 		[System.Management.Automation.PSObject[]]$results = $null
 		[System.Management.Automation.PSObject[]]$initialState = $null
 		[System.Management.Automation.PSObject[]]$currentState = $null
+		[System.Management.Automation.PSObject[]]$lastState = $null
 		[string]$savedFile = ""
+		[string]$initialStateFile = "$($filepath+$filename)-initialState.json"
+		[string]$lastStateFile = "$($filepath+$filename)-lastState.json"
+		[string]$currentStateFile = "$($filepath+$filename)-currentState.json"
+		[string]$initialStateFile = "$($filepath+$filename)-initialState.json"
 
 		$results = New-Object System.Management.Automation.PSObject
 
-		$results = $initialState = (((get-content -Path "$($filepath+$filename)-initialState.json" | ConvertFrom-Json).payload) | ConvertFrom-Json)
-		
+		#Retreive the initial state
+		if (Test-Path $initialStateFile){
+			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Retrieving the initial state"
+			$initialState = Get-Content -Path "$($initialStateFile)"
+		}
+		else {
+			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Initial state do not exist, so we create the initial state from the current state"
+			$initialState = Save-InitialState -jobID $jobID -payload $payload -filepath $filepath -filename $filename
+		}
+
+		#Retreive the state from the previous run and rename it to lastState and write the current state
+		if (Test-Path $currentStateFile){
+			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Retrieving the last state and renaming its name to reflect it is not the current state anymore"
+
+			$lastState = get-content -Path "$($currentStateFile)"
+			
+			#Rename the previous last state
+			if (Test-Path $lastStateFile){
+				[string]$previousLastStateFile = ""
+				$previousLastState = get-content -Path "$($lastStateFile)"
+				$previousLastStateFile = "$($filepath+$filename)-$(($previousLastState.jobID) | ConvertFrom-Json).json"
+				Rename-Item -Path $lastStateFile -NewName $previousLastStateFile
+			}
+			Rename-Item -Path $currentStateFile -NewName $lastStateFile
+
+			#Write the new current state
+			[System.Management.Automation.PSObject] $c = New-Object System.Management.Automation.PSObject
+			$c | Add-Member -MemberType NoteProperty "jobID" $jobID
+			$c | Add-Member -MemberType NoteProperty "payload" ($payload | ConvertTo-Json | Out-String)
+			$savedFile = $c | ConvertTo-Json | Out-String
+			$savedFile | Out-File -FilePath "$($filepath+$filename)-currentState.json"
+			$currentState = $savedFile
+		}
+		#if the last state do not exist only write the current state
+		else {
+			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Last state do not exist, so only saving the current state"
+			[System.Management.Automation.PSObject] $c = New-Object System.Management.Automation.PSObject
+			$c | Add-Member -MemberType NoteProperty "jobID" $jobID
+			$c | Add-Member -MemberType NoteProperty "payload" ($payload | ConvertTo-Json | Out-String)
+			$savedFile = $c | ConvertTo-Json | Out-String
+			$savedFile | Out-File -FilePath "$($filepath+$filename)-currentState.json"
+			$currentState = $savedFile
+		}
+
+		$results = New-Object System.Management.Automation.PSObject
 		<#$payload | Add-Member -MemberType NoteProperty "jobID" $jobID
 
 		$results | Add-Member -MemberType NoteProperty "payload" ($payload | ConvertTo-Json | Out-String)
 
 		$savedFile = $results | ConvertTo-Json | Out-String
 
-		$savedFile | Out-File -FilePath "$($filepath+$filename)-initialState.json"#>
+		$savedFile | Out-File -FilePath "$($filepath+$filename)-current.json"#>
 		
 		Write-Output ($results)
 
