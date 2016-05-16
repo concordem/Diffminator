@@ -16,7 +16,36 @@ Import-Module -Force LogManagement <# -Verbose -Debug#>
 ### End Logging module ###
 
 Import-Module -Force "$dp0\Diffminator.psm1"
+
+[System.Management.Automation.PSObject[]]$results = $null
+[System.Management.Automation.PSObject[]]$diffAdded = @()
+[System.Management.Automation.PSObject[]]$diffDeleted = @()
+
 #Save-InitialState -jobID $(get-date) -payload $(Get-Process) -filepath "c:\temp\" -filename "DiffminatorTest" | Out-Null
-$r = CompareWith-InitialState -jobID $(get-date) -payload $(Get-Process) -filepath "c:\temp\" -filename "DiffminatorTest"
-Write-Output $r
+
+$results = CompareWith-InitialState -jobID $(get-date) -payload $(Get-Process | select id,processname) -filepath "c:\temp\" -filename "DiffminatorTest"
+
+foreach ($r in $results){
+	switch ($r.SideIndicator){
+		"=>" {
+			$diffAdded += ($r.InputObject)
+			break
+		}
+		"<=" {
+			$diffDeleted += ($r.InputObject)
+			break
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 Write-Host -ForegroundColor Magenta "FIN"

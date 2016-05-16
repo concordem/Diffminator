@@ -79,7 +79,7 @@ Function Save-InitialState {
 
 	process {
 		Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Beginning process loop"
-		[System.Management.Automation.PSObject]$results = $null
+		[System.Management.Automation.PSObject[]]$results = $null
 		[string]$savedFile = ""
 
 		$results = New-Object System.Management.Automation.PSObject
@@ -210,66 +210,43 @@ Function CompareWith-InitialState {
 		}
 
 		$results = New-Object System.Management.Automation.PSObject
-		<#$payload | Add-Member -MemberType NoteProperty "jobID" $jobID
-
-		$results | Add-Member -MemberType NoteProperty "payload" ($payload | ConvertTo-Json | Out-String)
-
-		$savedFile = $results | ConvertTo-Json | Out-String
-
-		$savedFile | Out-File -FilePath "$($filepath+$filename)-current.json"#>
+		
+		$results = Compare-State -state1 $initialState -state2 $currentState
 		
 		Write-Output ($results)
 
 	}
 }
 
-Function CompareWith-InitialState {
+Function Compare-State {
 	<#
 	.SYNOPSIS
-	Save the data to compare initial state
+	Compare two state and return the difference if applicable.
 	.DESCRIPTION
-	Save the data to compare initial state
+	Compare two state and return the difference if applicable.
 	.EXAMPLE
-	CompareWith-InitialState ........ TO BE COMPLETED
+	Compare-State ........ TO BE COMPLETED
 	.EXAMPLE
-	CompareWith-InitialState ........ TO BE COMPLETED SECOND EXAMPLE
-	.PARAMETER jobID
-	The job unique ID.
-	.PARAMETER $payload
-	The original object to save for future comparison.
-	.PARAMETER $filePath
-	Where to save the file.
-	.PARAMETER $filename
-	The file's name
+	Compare-State ........ TO BE COMPLETED SECOND EXAMPLE
+	.PARAMETER state1
+	The first state to compare.
+	.PARAMETER state2
+	The second state to compare.
 	#>
 [CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Low')]
 	param (
 		[Parameter(Mandatory=$True,
 		#ValueFromPipeline=$True,
 		ValueFromPipelineByPropertyName=$True,
-		HelpMessage="The job unique ID.")]
-		[object]$jobID,
+		HelpMessage="The first state to compare.")]
+		[PSObject[]]$state1,
 					
 		[Parameter(Mandatory=$True,
 		#ValueFromPipeline=$True,
 		ValueFromPipelineByPropertyName=$True,
-		HelpMessage="The original object to save for future comparison.")]
+		HelpMessage="The second state to compare.")]
 		#[ValidateLength(0,30)]
-		[System.Management.Automation.PSObject]$payload,
-
-		[Parameter(Mandatory=$False,
-		#ValueFromPipeline=$True,
-		ValueFromPipelineByPropertyName=$True,
-		HelpMessage="Where to save the file.")]
-		#[ValidateLength(0,30)]
-		[string]$filepath,
-
-		[Parameter(Mandatory=$False,
-		#ValueFromPipeline=$True,
-		ValueFromPipelineByPropertyName=$True,
-		HelpMessage="The file's name")]
-		#[ValidateLength(0,30)]
-		[string]$filename
+		[PSObject[]]$state2
 	)
 
 	begin {
@@ -279,7 +256,15 @@ Function CompareWith-InitialState {
 	process {
 		Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Beginning process loop"
 		[System.Management.Automation.PSObject[]]$results = $null
+		[System.Management.Automation.PSObject[]]$payloadState1 = $null
+		[System.Management.Automation.PSObject[]]$payloadState2 = $null
 
+		$payloadState1 = (($state1 | ConvertFrom-Json).payload) | ConvertFrom-Json
+		$payloadState2 = (($state2 | ConvertFrom-Json).payload) | ConvertFrom-Json
+
+		$results = Compare-Object -ReferenceObject $payloadState1 -DifferenceObject $payloadState2
+
+		Write-Output ($results)
 	}
 }
 
