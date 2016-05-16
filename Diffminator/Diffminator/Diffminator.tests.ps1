@@ -18,4 +18,5 @@ Import-Module -Force LogManagement <# -Verbose -Debug#>
 Import-Module -Force "$dp0\Diffminator.psm1"
 #Save-InitialState -jobID $(get-date) -payload $(Get-Process) -filepath "c:\temp\" -filename "DiffminatorTest" | Out-Null
 $r = CompareWith-InitialState -jobID $(get-date) -payload $(Get-Process) -filepath "c:\temp\" -filename "DiffminatorTest"
+Write-Output $r
 Write-Host -ForegroundColor Magenta "FIN"

@@ -7,15 +7,10 @@
  FileName			:			Diffminator.ps1
 
  Description		:			Entry point for Diffminator Module
-								****For the time being, all classes are in the current file because Powershell
-								does not support exploding class hierarchy in multiple file outside a module file :
-								http://powershell.org/wp/forums/topic/dsc-custom-resource-using-classes-each-class-in-separate-file/
-																and
-								http://powershell.org/wp/2014/09/08/powershell-v5-class-support/********
 
  Creation Date		:			2016-05-05
 
- Modification Date	:			2016-05-12
+ Modification Date	:			2016-05-16
 #>
 
 Set-StrictMode -Version Latest
@@ -172,7 +167,7 @@ Function CompareWith-InitialState {
 		#Retreive the initial state
 		if (Test-Path $initialStateFile){
 			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Retrieving the initial state"
-			$initialState = Get-Content -Path "$($initialStateFile)"
+			$initialState = Get-Content -Path "$($initialStateFile)" -Raw
 		}
 		else {
 			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Initial state do not exist, so we create the initial state from the current state"
@@ -183,13 +178,14 @@ Function CompareWith-InitialState {
 		if (Test-Path $currentStateFile){
 			Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Retrieving the last state and renaming its name to reflect it is not the current state anymore"
 
-			$lastState = get-content -Path "$($currentStateFile)"
+			$lastState = get-content -Path "$($currentStateFile)" -Raw
 			
 			#Rename the previous last state
 			if (Test-Path $lastStateFile){
 				[string]$previousLastStateFile = ""
-				$previousLastState = get-content -Path "$($lastStateFile)"
-				$previousLastStateFile = "$($filepath+$filename)-$(($previousLastState.jobID) | ConvertFrom-Json).json"
+				$previousLastState = get-content -Path "$($lastStateFile)" -Raw
+				[string]$jID = (($previousLastState | ConvertFrom-json).JobID).ToLocalTime().ToString().Replace(' ','_').Replace('/','_').Replace(":","_")
+				$previousLastStateFile = "$($filepath+$filename)-$($jID).json"
 				Rename-Item -Path $lastStateFile -NewName $previousLastStateFile
 			}
 			Rename-Item -Path $currentStateFile -NewName $lastStateFile
@@ -223,6 +219,66 @@ Function CompareWith-InitialState {
 		$savedFile | Out-File -FilePath "$($filepath+$filename)-current.json"#>
 		
 		Write-Output ($results)
+
+	}
+}
+
+Function CompareWith-InitialState {
+	<#
+	.SYNOPSIS
+	Save the data to compare initial state
+	.DESCRIPTION
+	Save the data to compare initial state
+	.EXAMPLE
+	CompareWith-InitialState ........ TO BE COMPLETED
+	.EXAMPLE
+	CompareWith-InitialState ........ TO BE COMPLETED SECOND EXAMPLE
+	.PARAMETER jobID
+	The job unique ID.
+	.PARAMETER $payload
+	The original object to save for future comparison.
+	.PARAMETER $filePath
+	Where to save the file.
+	.PARAMETER $filename
+	The file's name
+	#>
+[CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Low')]
+	param (
+		[Parameter(Mandatory=$True,
+		#ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage="The job unique ID.")]
+		[object]$jobID,
+					
+		[Parameter(Mandatory=$True,
+		#ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage="The original object to save for future comparison.")]
+		#[ValidateLength(0,30)]
+		[System.Management.Automation.PSObject]$payload,
+
+		[Parameter(Mandatory=$False,
+		#ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage="Where to save the file.")]
+		#[ValidateLength(0,30)]
+		[string]$filepath,
+
+		[Parameter(Mandatory=$False,
+		#ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage="The file's name")]
+		#[ValidateLength(0,30)]
+		[string]$filename
+	)
+
+	begin {
+		Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Looking for difference between two state"
+	}
+
+	process {
+		Log-Verbose "$($dp0Module).$($MyInvocation.MyCommand) : Beginning process loop"
+		[System.Management.Automation.PSObject[]]$results = $null
 
 	}
 }
